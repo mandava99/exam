@@ -1,0 +1,29 @@
+node{
+    stage ('SCM Checkout'){
+        git 'https://github.com/mandava99/exam'
+   }
+    stage ('Mvn package'){
+        def mvnHome = tool name: 'Maven-2', type: 'maven'
+        def mvnCMD = "${mvnHome}/bin/mvn"
+         sh "${mvnCMD} clean package"
+   }
+    stage ('Build Docker Image'){
+        sh 'docker build -t mmandava/exam:2.0.0 .'    
+   }
+    stage ('Push Docker Image'){
+     withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerHubPwd')]) {
+        sh "docker login -u mmandava -p ${dockerHubPwd}"   
+     }
+     sh 'docker push mmandava/exam:2.0.0'
+   }
+   stage('Run Container'){
+       def dockerRun = sh 'docker run -i -d -p 5000:8080 mmandava/exam:2.0.0'
+       sshagent (credentials: ['ssh_private']) {
+    sh 'ssh -o StrictHostKeyChecking=no root@192.168.7.165 ${dockerRun}'
+  }
+    
+       
+   }
+       
+   
+}
